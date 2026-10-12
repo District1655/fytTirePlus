@@ -19,5 +19,10 @@ dependencyResolutionManagement {
 }
 rootProject.name = 'fytTirePlus'
 include ':app'
+
+// gh-updater 通用更新库：本地开发优先用 D:\tool 下的模块；CI 上回退到 workflow 里
+// checkout 到 ./gh-updater 的副本（见 .github/workflows/build.yml 的 gh-updater step）
+def localUpdater = 'D:/tool/gh-updater/updater'
+def updaterDir = file(localUpdater).exists() ? localUpdater : 'gh-updater/updater'
 include ':updater'
-project(':updater').projectDir = file('D:/tool/gh-updater/updater')
+project(':updater').projectDir = file(updaterDir)
