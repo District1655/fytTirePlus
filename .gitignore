@@ -1,0 +1,31 @@
+# Gradle
+.gradle/
+build/
+**/build/
+local.properties
+
+# 本地产物（Release APK 由 GitHub Actions 发布，不入库）
+release/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.codeartsdoer/
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 日志/临时
+*.log
+logs/
+cert.txt
+
+# 内部开发文档（不入库）
+CHANGELOG.md
+CHANGELOG_ARCHIVE.md
+REFERENCE.md
+captures/
+.externalNativeBuild/
+.cxx/

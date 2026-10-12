@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 悬浮面板（注入 com.syu.canbus 后由宿主进程持有） -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- 侦察日志写入外部存储 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- 在线更新：检查 GitHub Releases + 下载 APK -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 安装更新 APK -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <application
+        android:label="fytTirePlus"
+        android:allowBackup="false">
+
+        <!-- 模块主界面：版本信息 / 检查更新 / 下载安装 -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- LSPosed 模块声明 -->
+        <meta-data
+            android:name="xposedmodule"
+            android:value="true" />
+        <meta-data
+            android:name="xposedminversion"
+            android:value="82" />
+        <meta-data
+            android:name="xposeddescription"
+            android:value="朗逸Plus 胎压增强：温度/标准值/换位/侦察（注入车辆信息 com.syu.canbus）" />
+        <meta-data
+            android:name="xposedscope"
+            android:value="com.syu.canbus" />
+    </application>
+</manifest>
