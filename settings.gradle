@@ -20,9 +20,12 @@ dependencyResolutionManagement {
 rootProject.name = 'fytTirePlus'
 include ':app'
 
-// gh-updater 通用更新库：本地开发优先用 D:\tool 下的模块；CI 上回退到 workflow 里
-// checkout 到 ./gh-updater 的副本（见 .github/workflows/build.yml 的 gh-updater step）
+// gh-updater 通用更新库：本地(Windows)优先用 D:\tool 下的模块；CI(Linux) 回退到
+// workflow 里 checkout 到 ./gh-updater 的副本（见 .github/workflows/build.yml 的 gh-updater step）
+// 注意：Linux 下 Gradle 无法把 'D:/...' 盘符路径转成文件（冒号被解析为 URL scheme），
+// 必须先判操作系统再调 file().exists()
+def isWindows = System.getProperty('os.name').toLowerCase().contains('windows')
 def localUpdater = 'D:/tool/gh-updater/updater'
-def updaterDir = file(localUpdater).exists() ? localUpdater : 'gh-updater/updater'
+def updaterDir = (isWindows && file(localUpdater).exists()) ? localUpdater : 'gh-updater/updater'
 include ':updater'
 project(':updater').projectDir = file(updaterDir)
