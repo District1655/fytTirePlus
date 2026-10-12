@@ -10,8 +10,8 @@ android {
         applicationId "com.fyt.tireplus"
         minSdk 21
         targetSdk 33
-        versionCode 10000
-        versionName "1.0.0"
+        versionCode 10001
+        versionName "1.0.1"
     }
 
     // 显式配置固定 debug keystore，确保 CI 与本地签名一致（避免覆盖安装时报签名不一致）

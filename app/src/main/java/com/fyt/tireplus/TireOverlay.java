@@ -29,16 +29,22 @@ public class TireOverlay implements TireDataCenter.TireListener {
     public void attach(Activity act) {
         if (attached) return;
         this.activity = act;
-        View decor = act.getWindow().getDecorView();
-        if (!(decor instanceof ViewGroup)) return;
-        ViewGroup vg = (ViewGroup) decor;
+        // 优先挂到 android.R.id.content：起点在系统状态栏下方，
+        // 避免 decorView 全屏坐标导致顶部按钮被车机系统栏遮住
+        ViewGroup vg = act.findViewById(android.R.id.content);
+        if (vg == null) {
+            View decor = act.getWindow().getDecorView();
+            if (!(decor instanceof ViewGroup)) return;
+            vg = (ViewGroup) decor;
+        }
         // 兼容重启后重复 attach
         View old = vg.findViewById(TAG_ID);
         if (old != null) vg.removeView(old);
         build(vg);
         TireDataCenter.addListener(this);
         attached = true;
-        TireDataCenter.log("TireOverlay attached: " + act.getClass().getName());
+        TireDataCenter.log("TireOverlay attached: " + act.getClass().getName()
+                + " parent=" + vg.getClass().getSimpleName());
     }
 
     private void build(ViewGroup parent) {
@@ -174,10 +180,13 @@ public class TireOverlay implements TireDataCenter.TireListener {
     }
 
     static void detach(Activity act) {
-        View decor = act.getWindow().getDecorView();
-        if (decor instanceof ViewGroup) {
-            View old = ((ViewGroup) decor).findViewById(TAG_ID);
-            if (old != null) ((ViewGroup) decor).removeView(old);
+        ViewGroup vg = act.findViewById(android.R.id.content);
+        if (vg == null) {
+            View decor = act.getWindow().getDecorView();
+            if (!(decor instanceof ViewGroup)) return;
+            vg = (ViewGroup) decor;
         }
+        View old = vg.findViewById(TAG_ID);
+        if (old != null) vg.removeView(old);
     }
 }
