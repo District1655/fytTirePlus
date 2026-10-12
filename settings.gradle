@@ -11,11 +11,13 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        google()
-        mavenCentral()
         maven { url 'https://maven.aliyun.com/repository/google' }
         maven { url 'https://maven.aliyun.com/repository/public' }
+        google()
+        mavenCentral()
     }
 }
 rootProject.name = 'fytTirePlus'
 include ':app'
+include ':updater'
+project(':updater').projectDir = file('D:/tool/gh-updater/updater')

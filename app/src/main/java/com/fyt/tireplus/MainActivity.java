@@ -1,8 +1,6 @@
 package com.fyt.tireplus;
 
 import android.app.Activity;
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Gravity;
@@ -12,17 +10,28 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.fyt.updater.GhUpdater;
+import com.fyt.updater.ReleaseInfo;
+import com.fyt.updater.UpdateCallback;
+import com.fyt.updater.UpdaterConfig;
+
 /**
  * 模块入口：版本信息 + 检查更新 + 下载安装。
  * 实际功能（胎压增强）通过 Xposed 注入 com.syu.canbus 进程实现。
+ *
+ * 使用通用库 com.fyt.updater（gh-updater），任何项目 3 步接入在线更新。
  */
 public class MainActivity extends Activity {
+
+    private static final String REPO = "District1655/fytTirePlus";
 
     private TextView mStatusView;
     private TextView mInfoView;
     private Button mCheckBtn;
     private Button mDownloadBtn;
-    private UpdateManager.ReleaseInfo mLatest;
+
+    private GhUpdater mUpdater;
+    private ReleaseInfo mLatest;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,6 +42,14 @@ public class MainActivity extends Activity {
         root.setPadding(dp(16), dp(16), dp(16), dp(16));
         sv.addView(root);
         setContentView(sv);
+
+        // 1. 构建更新配置
+        UpdaterConfig config = new UpdaterConfig.Builder(REPO)
+                .appName("fytTirePlus")
+                .currentVersion(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME)
+                .logTag("[fytTirePlus]")
+                .build();
+        mUpdater = new GhUpdater(config);
 
         // 标题
         TextView title = new TextView(this);
@@ -82,7 +99,7 @@ public class MainActivity extends Activity {
                 + "2. 强停「车辆信息」或重启车机生效\n"
                 + "3. 打开车辆信息→胎压页面，点右上「增强」按钮\n"
                 + "4. 用面板「侦察」页找温度码后填入配置\n\n"
-                + "GitHub: https://github.com/" + UpdateManager.REPO);
+                + "GitHub: https://github.com/" + REPO);
         root.addView(help);
     }
 
@@ -94,34 +111,38 @@ public class MainActivity extends Activity {
     }
 
     // ------------------------------------------------------------------
-    // 更新逻辑
+    // 更新逻辑（使用通用库 GhUpdater）
     // ------------------------------------------------------------------
 
     private void checkUpdate() {
         mStatusView.setText("状态：正在检查更新…");
         mDownloadBtn.setEnabled(false);
-        new Thread(() -> {
-            final UpdateManager.ReleaseInfo info = UpdateManager.checkLatest();
-            runOnUiThread(() -> {
-                mLatest = info;
-                if (info == null) {
-                    mStatusView.setText("状态：检查失败（网络不通或仓库无 Release）\n"
-                            + "请确认车机可访问 api.github.com");
-                    return;
-                }
-                String head = "状态：最新版本 v" + info.tagName
-                        + "（code " + info.versionCode + "）\n";
-                String body = (info.body == null || info.body.isEmpty())
-                        ? "" : "更新内容：\n" + info.body + "\n";
-                if (UpdateManager.isNewer(info, BuildConfig.VERSION_CODE)) {
-                    mStatusView.setText(head + body + "→ 发现新版本，可下载安装");
-                    mDownloadBtn.setEnabled(true);
-                } else {
-                    mStatusView.setText(head + body + "→ 当前已是最新版本");
-                    mDownloadBtn.setEnabled(false);
-                }
-            });
-        }).start();
+
+        // 2. 异步检查更新，回调在主线程
+        mUpdater.checkUpdate(new UpdateCallback() {
+            @Override
+            public void onUpdateAvailable(ReleaseInfo release) {
+                mLatest = release;
+                String head = "状态：最新版本 v" + release.tagName
+                        + "（code " + release.versionCode + "）\n";
+                String body = (release.body == null || release.body.isEmpty())
+                        ? "" : "更新内容：\n" + release.body + "\n";
+                mStatusView.setText(head + body + "→ 发现新版本，可下载安装");
+                mDownloadBtn.setEnabled(true);
+            }
+
+            @Override
+            public void onUpToDate() {
+                mStatusView.setText("状态：当前已是最新版本（v" + BuildConfig.VERSION_NAME + "）");
+                mDownloadBtn.setEnabled(false);
+            }
+
+            @Override
+            public void onError(String message) {
+                mStatusView.setText("状态：" + message + "\n请确认车机可访问 api.github.com");
+                mDownloadBtn.setEnabled(false);
+            }
+        });
     }
 
     private void startDownload() {
@@ -129,11 +150,11 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "请先检查更新", Toast.LENGTH_SHORT).show();
             return;
         }
-        mStatusView.setText("状态：正在下载 " + mLatest.tagName + " …");
-        long id = UpdateManager.download(this, mLatest.downloadUrl);
-        if (id >= 0) {
-            UpdateManager.registerDownloadReceiver(this, id);
-        } else {
+        mStatusView.setText("状态：正在下载 v" + mLatest.tagName + " …");
+
+        // 3. 下载并安装（库自动注册广播接收器，下载完成弹安装界面）
+        long id = mUpdater.downloadAndInstall(this, mLatest.downloadUrl);
+        if (id < 0) {
             mStatusView.setText("状态：下载启动失败");
         }
     }
