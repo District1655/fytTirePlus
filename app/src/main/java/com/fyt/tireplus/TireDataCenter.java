@@ -159,6 +159,11 @@ public class TireDataCenter {
         }
     }
 
+    /** 配置保存后手动触发一次 UI 刷新（立即反映新标准值/温度码） */
+    static void requestUiRefresh() {
+        dispatch();
+    }
+
     static int readRaw(int code) {
         if (DATA == null || code < 0 || code >= DATA.length) return 0;
         return DATA[code];

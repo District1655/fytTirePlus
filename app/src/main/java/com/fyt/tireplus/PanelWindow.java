@@ -180,7 +180,8 @@ public class PanelWindow {
         wrap.addView(rowTop, new LinearLayout.LayoutParams(-1, -2));
         wrap.addView(rowBottom, new LinearLayout.LayoutParams(-1, -2));
         TextView hint = new TextView(act);
-        hint.setText("温度码未配置时显示 --，请用「侦察」页实测后填入「标准值」页");
+        hint.setText("本车 RZC 协议(cAN 184~187=胎压 0.1bar)不含温度数据，"
+                + "温度列恒为 -- 属正常；标准值仅本地告警用");
         hint.setTextColor(0xFF888888);
         hint.setTextSize(11f);
         hint.setGravity(Gravity.CENTER);
@@ -235,9 +236,7 @@ public class PanelWindow {
 
             stdEt[i] = new EditText(act);
             stdEt[i].setText(String.valueOf((int) ModuleConfig.stdKpa[i]));
-            stdEt[i].setTextColor(Color.WHITE);
-            stdEt[i].setTextSize(14f);
-            stdEt[i].setGravity(Gravity.CENTER);
+            styleEditText(stdEt[i]);
             stdEt[i].setInputType(InputType.TYPE_CLASS_NUMBER);
             row.addView(stdEt[i], new LinearLayout.LayoutParams(0, -2, 1));
 
@@ -267,8 +266,7 @@ public class PanelWindow {
             row.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
             tempEt[i] = new EditText(act);
             tempEt[i].setText(String.valueOf(ModuleConfig.tempCodes[i]));
-            tempEt[i].setTextColor(Color.WHITE);
-            tempEt[i].setTextSize(14f);
+            styleEditText(tempEt[i]);
             tempEt[i].setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
             row.addView(tempEt[i], new LinearLayout.LayoutParams(dp(act, 90), -2));
             wrap.addView(row, new LinearLayout.LayoutParams(-1, dp(act, 38)));
@@ -283,10 +281,38 @@ public class PanelWindow {
         row2.addView(offLabel, new LinearLayout.LayoutParams(0, -2, 1));
         final EditText offEt = new EditText(act);
         offEt.setText(String.valueOf(ModuleConfig.tempOffset));
-        offEt.setTextColor(Color.WHITE);
+        styleEditText(offEt);
         offEt.setInputType(InputType.TYPE_CLASS_NUMBER);
         row2.addView(offEt, new LinearLayout.LayoutParams(dp(act, 90), -2));
         wrap.addView(row2, new LinearLayout.LayoutParams(-1, dp(act, 38)));
+
+        // 全轮快捷应用 + RZC 协议说明
+        LinearLayout rowAll = new LinearLayout(act);
+        rowAll.setGravity(Gravity.CENTER_VERTICAL);
+        Button applyAll = smallBtn(act, "把左前值应用到全部四轮");
+        applyAll.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                double v0 = parseDouble(stdEt[0].getText().toString(), ModuleConfig.stdKpa[0]);
+                for (int i = 0; i < 4; i++) {
+                    ModuleConfig.stdKpa[i] = v0;
+                    stdEt[i].setText(String.valueOf((int) v0));
+                }
+                ModuleConfig.save();
+                TireDataCenter.requestUiRefresh();
+                refreshTireCards();
+                Toast.makeText(v.getContext(), "四轮标准值已设为 " + ((int) v0) + "kPa", Toast.LENGTH_SHORT).show();
+            }
+        });
+        rowAll.addView(applyAll, new LinearLayout.LayoutParams(0, dp(act, 38), 1));
+        wrap.addView(rowAll);
+        TextView note = new TextView(act);
+        note.setText("说明: 本车 RZC 协议无下行设置命令，标准值仅用于"
+                + "本模块显示与偏离告警，不会改变原车仪表。");
+        note.setTextColor(0xFF888888);
+        note.setTextSize(11f);
+        note.setPadding(0, dp(act, 4), 0, 0);
+        wrap.addView(note);
 
         Button save = smallBtn(act, "保存配置");
         save.setOnClickListener(new View.OnClickListener() {
@@ -301,6 +327,7 @@ public class PanelWindow {
                 }
                 ModuleConfig.tempOffset = parseInt(offEt.getText().toString(), 40);
                 ModuleConfig.save();
+                TireDataCenter.requestUiRefresh();
                 refreshTireCards();
                 Toast.makeText(v.getContext(), "已保存", Toast.LENGTH_SHORT).show();
             }
@@ -431,14 +458,12 @@ public class PanelWindow {
         row.setGravity(Gravity.CENTER_VERTICAL);
         final EditText codeEt = new EditText(act);
         codeEt.setHint("cmdCode");
-        codeEt.setHintTextColor(0xFF666666);
-        codeEt.setTextColor(Color.WHITE);
+        styleEditText(codeEt);
         codeEt.setInputType(InputType.TYPE_CLASS_NUMBER);
         row.addView(codeEt, new LinearLayout.LayoutParams(dp(act, 90), -2));
         final EditText intsEt = new EditText(act);
         intsEt.setHint("参数 逗号分隔 如 4 或 255,2");
-        intsEt.setHintTextColor(0xFF666666);
-        intsEt.setTextColor(Color.WHITE);
+        styleEditText(intsEt);
         row.addView(intsEt, new LinearLayout.LayoutParams(0, -2, 1));
         Button send = smallBtn(act, "发送");
         send.setOnClickListener(new View.OnClickListener() {
@@ -509,14 +534,34 @@ public class PanelWindow {
         return tv;
     }
 
+    /** 统一输入框样式：深色圆角底 + 白字（修复宿主浅色主题下白字白底看不清） */
+    private static void styleEditText(EditText et) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF23272C);
+        bg.setCornerRadius(dp(et.getContext(), 4));
+        bg.setStroke(dp(et.getContext(), 1), 0xFF4A5158);
+        et.setBackground(bg);
+        et.setTextColor(Color.WHITE);
+        et.setHintTextColor(0xFF777777);
+        et.setTextSize(14f);
+        et.setGravity(Gravity.CENTER);
+        et.setPadding(dp(et.getContext(), 6), 0, dp(et.getContext(), 6), 0);
+    }
+
     private static Button smallBtn(Context ctx, String text) {
         Button b = new Button(ctx);
         b.setText(text);
         b.setTextSize(12f);
         b.setTextColor(Color.WHITE);
+        b.setAllCaps(false);
         b.setMinHeight(0);
         b.setMinimumHeight(0);
         b.setPadding(dp(ctx, 8), 0, dp(ctx, 8), 0);
+        // 统一深色圆角底，避免宿主主题默认按钮底色与白字冲突
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF32373D);
+        bg.setCornerRadius(dp(ctx, 4));
+        b.setBackground(bg);
         return b;
     }
 
